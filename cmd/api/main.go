@@ -10,21 +10,25 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/streadway/amqp"
 
 	apiHandler "github.com/raninho/stiuswal/cmd/api/handler"
 	apiRouter "github.com/raninho/stiuswal/cmd/api/router"
+	"github.com/raninho/stiuswal/internal/lawsuit"
 )
 
 var (
 	port        string
 	redisURI    string
 	postgresURI string
+	amqpURI     string
 )
 
 func init() {
 	flag.StringVar(&port, "port", os.Getenv("PORT"), "-port=8080")
 	flag.StringVar(&postgresURI, "postgresURI", os.Getenv("POSTGRES_URI"), "-postgresURI=postgres://postgres:@localhost/postgres?sslmode=disable")
 	flag.StringVar(&redisURI, "redisURI", os.Getenv("REDIS_URI"), "-redisURI=redis://localhost")
+	flag.StringVar(&amqpURI, "amqpURI", os.Getenv("AMQP_URI"), "-amqpURI=amqp://guest:guest@localhost:5672/")
 }
 
 func main() {
@@ -38,6 +42,8 @@ func main() {
 	}
 	defer db.Close()
 
+	db.AutoMigrate(lawsuit.Lawsuit{})
+
 	option, err := redis.ParseURL(redisURI)
 	if err != nil {
 		panic("Error Cache: " + err.Error())
@@ -50,7 +56,18 @@ func main() {
 	}
 	defer cache.Close()
 
-	h := &apiHandler.Handler{Cache: cache, DB: db}
+	amqpConn, err := amqp.Dial(amqpURI)
+	if err != nil {
+		panic("Error Amqp: " + err.Error())
+	}
+	defer amqpConn.Close()
+
+	amqpChannel, err := amqpConn.Channel()
+	if err != nil {
+		panic("Error amqpChannel: " + err.Error())
+	}
+
+	h := &apiHandler.Handler{Cache: cache, DB: db, Queue: amqpChannel}
 	routes := apiRouter.Router(h)
 
 	s := &http.Server{

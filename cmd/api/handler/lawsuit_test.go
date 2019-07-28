@@ -7,8 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
+
 	apiHandler "github.com/raninho/stiuswal/cmd/api/handler"
 	apiRouter "github.com/raninho/stiuswal/cmd/api/router"
+	"github.com/raninho/stiuswal/internal/lawsuit"
+	"github.com/raninho/stiuswal/test"
 )
 
 func TestLawsuitInformationRequest_Ok(t *testing.T) {
@@ -44,6 +48,18 @@ func TestLawsuitInformationHandlerWithInvalidLawSuitNumber(t *testing.T) {
 }
 
 func TestLawsuitInformationHandlerWithValidLawSuitNumber(t *testing.T) {
+	db := test.NewDBTest()
+	defer db.Close()
+	defer db.DropTable(lawsuit.Lawsuit{}.TableName())
+
+	db.AutoMigrate(lawsuit.Lawsuit{})
+
+	cache := test.NewRedisTest()
+	defer cache.Close()
+
+	queue := test.NewQueueTest()
+	defer queue.Close()
+
 	request := apiHandler.LawsuitInformationRequest{}
 	request.LawsuitNumber = "0710802-55.2018.8.02.0001"
 
@@ -57,10 +73,25 @@ func TestLawsuitInformationHandlerWithValidLawSuitNumber(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	h := &apiHandler.Handler{DB: nil, Cache: nil}
+	h := &apiHandler.Handler{DB: db, Cache: cache, Queue: queue}
 
 	apiRouter.Router(h).ServeHTTP(w, r)
 	if http.StatusAccepted != w.Code {
-		t.Error("http.StatusBadRequest != w.Code", http.StatusBadRequest, w.Code)
+		t.Fatal("http.StatusBadRequest != w.Code", http.StatusBadRequest, w.Code)
+	}
+
+	response := new(apiHandler.LawsuitInformationResponse)
+	decoder := json.NewDecoder(w.Body)
+	err = decoder.Decode(&response)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if request.LawsuitNumber != response.LawsuitNumber {
+		t.Fatal(`request.LawsuitNumber != response.LawsuitNumber`, request.LawsuitNumber, response.LawsuitNumber)
+	}
+
+	if _, err := uuid.Parse(response.OrderID); err != nil {
+		t.Fatal(`uuid.Parse(response.OrderID)`, response.OrderID)
 	}
 }

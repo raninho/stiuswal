@@ -8,11 +8,13 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
+	"github.com/streadway/amqp"
 )
 
 type Handler struct {
 	DB    *gorm.DB
 	Cache *redis.Client
+	Queue *amqp.Channel
 }
 
 func Respond(w http.ResponseWriter, r *http.Request, status int, data interface{}) {
