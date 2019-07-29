@@ -14,13 +14,13 @@ import (
 )
 
 var (
-	amqpURI string
+	amqpURI    string
 	webhookURI string
 )
 
 func init() {
 	flag.StringVar(&amqpURI, "amqpURI", os.Getenv("AMQP_URI"), "-amqpURI=amqp://guest:guest@localhost:5672/")
-	flag.StringVar(&webhookURI, "webhookURI", os.Getenv("WEBHOOK_URI"), "-awebhookURI=http://localhost:8080/webhooks/finish")
+	flag.StringVar(&webhookURI, "webhookURI", os.Getenv("WEBHOOK_URI"), "-webhookURI=http://localhost:8080/webhooks/finish")
 }
 
 func main() {
@@ -84,6 +84,12 @@ func main() {
 
 			body := &bytes.Buffer{}
 			json.NewEncoder(body).Encode(payload);
+
+			//https://www2.tjal.jus.br/cpopg/search.do?conversationId=&dadosConsulta.localPesquisa.cdLocal=-1&cbPesquisa=NUMPROC&dadosConsulta.tipoNuProcesso=UNIFICADO&numeroDigitoAnoUnificado=0710802-55.2018&foroNumeroUnificado=0001&dadosConsulta.valorConsultaNuUnificado=0710802-55.2018.8.02.0001&dadosConsulta.valorConsulta=&uuidCaptcha=
+			//https://www2.tjal.jus.br/cposg5/search.do?conversationId=&paginaConsulta=1&cbPesquisa=NUMPROC&tipoNuProcesso=UNIFICADO&numeroDigitoAnoUnificado=0710802-55.2018&foroNumeroUnificado=0001&dePesquisaNuUnificado=0710802-55.2018.8.02.0001&dePesquisa=&uuidCaptcha=
+
+			//https://esaj.tjms.jus.br/cpopg5/search.do?conversationId=&dadosConsulta.localPesquisa.cdLocal=-1&cbPesquisa=NUMPROC&dadosConsulta.tipoNuProcesso=UNIFICADO&numeroDigitoAnoUnificado=0710802-55.2018&foroNumeroUnificado=0001&dadosConsulta.valorConsultaNuUnificado=0710802-55.2018.8.12.0001&dadosConsulta.valorConsulta=&uuidCaptcha=
+			//https://esaj.tjms.jus.br/cposg5/search.do?conversationId=&paginaConsulta=1&localPesquisa.cdLocal=-1&cbPesquisa=NUMPROC&tipoNuProcesso=UNIFICADO&numeroDigitoAnoUnificado=0821901-51.2018&foroNumeroUnificado=0001&dePesquisaNuUnificado=0821901-51.2018.8.12.0001&dePesquisa=&uuidCaptcha=
 
 			var client = &http.Client{}
 
