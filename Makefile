@@ -12,8 +12,11 @@ dependency-test:
 	docker exec -it stiuswal-postgres psql -U postgres -c "CREATE DATABASE testdb ENCODING 'LATIN1' TEMPLATE template0 LC_COLLATE 'C' LC_CTYPE 'C';"
 	docker exec -it stiuswal-postgres psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE postgres TO postgres;"
 
-run:
+run-api:
 	go run cmd/api/main.go -port=8080 -postgresURI=postgres://postgres:@localhost/postgres?sslmode=disable -redisURI=redis://localhost -amqpURI=amqp://guest:guest@localhost:5672
+
+run-worker:
+	go run cmd/worker/main.go
 
 test-all:
 	go test ./... -v
