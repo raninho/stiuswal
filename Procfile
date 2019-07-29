@@ -1,2 +1,2 @@
-web: cmd/api
-worker: cmd/worker
+web: cmd/api/main
+worker: cmd/worker/main
