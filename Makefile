@@ -15,5 +15,6 @@ dependency-test:
 run:
 	go run cmd/api/main.go -port=8080 -postgresURI=postgres://postgres:@localhost/postgres?sslmode=disable -redisURI=redis://localhost -amqpURI=amqp://guest:guest@localhost:5672
 
-test:
+test-all:
 	go test ./... -v
+

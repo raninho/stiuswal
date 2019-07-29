@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/raninho/stiuswal/internal/lawsuit"
 	"github.com/streadway/amqp"
+
+	"github.com/raninho/stiuswal/internal/lawsuit"
 )
 
 var (
@@ -48,15 +48,7 @@ func main() {
 		panic("QueueDeclare: " + err.Error())
 	}
 
-	messageChannel, err := amqpChannel.Consume(
-		queue.Name,
-		"",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
+	messageChannel, err := amqpChannel.Consume(queue.Name, "", false, false, false, false, nil)
 
 	forever := make(chan bool)
 
@@ -70,37 +62,36 @@ func main() {
 			err := json.Unmarshal(d.Body, task)
 			if err != nil {
 				log.Printf("Error decoding JSON: %s", err)
-				break
+				err = d.Nack(false, true)
+				continue
 			}
 
-			fmt.Println(task.OrderID, task.LawsuitNumber)
+			lss, err := lawsuit.DoCrawler(task.LawsuitNumber)
+			lssdWithBytes, _ := json.Marshal(lss)
 
 			payload := new(lawsuit.ProcessFinishedInput)
 			payload.OrderID = task.OrderID
 			payload.LawsuitNumber = task.LawsuitNumber
-
-			payloadWithBytes, _ := json.Marshal(payload)
-			payload.Output = payloadWithBytes
+			payload.Output = lssdWithBytes
 
 			body := &bytes.Buffer{}
-			json.NewEncoder(body).Encode(payload);
+			_ = json.NewEncoder(body).Encode(payload)
 
-			//https://www2.tjal.jus.br/cpopg/search.do?conversationId=&dadosConsulta.localPesquisa.cdLocal=-1&cbPesquisa=NUMPROC&dadosConsulta.tipoNuProcesso=UNIFICADO&numeroDigitoAnoUnificado=0710802-55.2018&foroNumeroUnificado=0001&dadosConsulta.valorConsultaNuUnificado=0710802-55.2018.8.02.0001&dadosConsulta.valorConsulta=&uuidCaptcha=
-			//https://www2.tjal.jus.br/cposg5/search.do?conversationId=&paginaConsulta=1&cbPesquisa=NUMPROC&tipoNuProcesso=UNIFICADO&numeroDigitoAnoUnificado=0710802-55.2018&foroNumeroUnificado=0001&dePesquisaNuUnificado=0710802-55.2018.8.02.0001&dePesquisa=&uuidCaptcha=
-
-			//https://esaj.tjms.jus.br/cpopg5/search.do?conversationId=&dadosConsulta.localPesquisa.cdLocal=-1&cbPesquisa=NUMPROC&dadosConsulta.tipoNuProcesso=UNIFICADO&numeroDigitoAnoUnificado=0710802-55.2018&foroNumeroUnificado=0001&dadosConsulta.valorConsultaNuUnificado=0710802-55.2018.8.12.0001&dadosConsulta.valorConsulta=&uuidCaptcha=
-			//https://esaj.tjms.jus.br/cposg5/search.do?conversationId=&paginaConsulta=1&localPesquisa.cdLocal=-1&cbPesquisa=NUMPROC&tipoNuProcesso=UNIFICADO&numeroDigitoAnoUnificado=0821901-51.2018&foroNumeroUnificado=0001&dePesquisaNuUnificado=0821901-51.2018.8.12.0001&dePesquisa=&uuidCaptcha=
-
-			var client = &http.Client{}
 
 			req, err := http.NewRequest("POST", webhookURI, body)
 			if err != nil {
 				log.Println("NewRequest:", err.Error())
+				err = d.Nack(false, true)
+				continue
 			}
+
+			var client = &http.Client{}
 
 			resp, err := client.Do(req)
 			if err != nil {
 				log.Println("client:", err.Error())
+				err = d.Nack(false, true)
+				continue
 			}
 
 			if resp.StatusCode != http.StatusOK {
@@ -110,7 +101,6 @@ func main() {
 			}
 
 			_ = d.Ack(false)
-
 		}
 
 	}()
