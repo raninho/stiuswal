@@ -2,7 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -59,6 +62,10 @@ func (h *Handler) LawsuitInformationHandler(w http.ResponseWriter, r *http.Reque
 	Respond(w, r, http.StatusAccepted, response)
 }
 
+func KeyGetLawsuitInformationHandler(orderID string) string {
+	return fmt.Sprintf("get_lawsuit_orderid_%s", orderID)
+}
+
 func (h *Handler) GetLawsuitInformationHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	orderID := vars["orderID"]
@@ -68,10 +75,27 @@ func (h *Handler) GetLawsuitInformationHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	cached, err := h.Cache.Get(KeyGetLawsuitInformationHandler(orderID)).Result()
+	if err == nil{
+		ls := new(lawsuit.Lawsuit)
+		_ = json.Unmarshal([]byte(cached), ls)
+		Respond(w, r, http.StatusOK, ls)
+		return
+	}
+
 	ls, err := lawsuit.GetByOrderID(h.DB, orderID)
 	if err != nil {
 		Respond(w, r, http.StatusNotFound, err.Error())
 		return
+	}
+
+	caching, err := json.Marshal(ls)
+	if err != nil {
+		log.Println("json.Marshal:", err.Error())
+	}
+
+	if err := h.Cache.Set(KeyGetLawsuitInformationHandler(orderID), caching, time.Minute*1).Err(); err != nil {
+		log.Println("Cache.Set:", err.Error())
 	}
 
 	Respond(w, r, http.StatusOK, ls)
