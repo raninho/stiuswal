@@ -14,6 +14,7 @@ func Router(h *apiHandler.Handler) (router *mux.Router) {
 	router.HandleFunc("/lawsuits", h.LawsuitInformationHandler).Methods("POST")
 	router.HandleFunc("/lawsuits/{orderID}", h.GetLawsuitInformationHandler).Methods("GET")
 
+	router.HandleFunc("/webhooks/idempotency/{orderID}", h.WebHookIdempotencyHandler).Methods("GET")
 	router.HandleFunc("/webhooks/finish", h.WebHookFinishHandler).Methods("POST")
 
 	return

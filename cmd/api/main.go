@@ -27,9 +27,9 @@ var (
 
 func init() {
 	flag.StringVar(&port, "port", os.Getenv("PORT"), "-port=8080")
-	flag.StringVar(&postgresURI, "postgresURI", os.Getenv("POSTGRES_URI"), "-postgresURI=postgres://postgres:@localhost/postgres?sslmode=disable")
-	flag.StringVar(&redisURI, "redisURI", os.Getenv("REDIS_URI"), "-redisURI=redis://localhost")
-	flag.StringVar(&amqpURI, "amqpURI", os.Getenv("AMQP_URI"), "-amqpURI=amqp://guest:guest@localhost:5672/")
+	flag.StringVar(&postgresURI, "postgresURI", os.Getenv("DATABASE_URL"), "-postgresURI=postgres://postgres:@localhost/postgres?sslmode=disable")
+	flag.StringVar(&redisURI, "redisURI", os.Getenv("REDIS_URL"), "-redisURI=redis://localhost")
+	flag.StringVar(&amqpURI, "amqpURI", os.Getenv("CLOUDAMQP_URL"), "-amqpURI=amqp://guest:guest@localhost:5672/")
 }
 
 func main() {

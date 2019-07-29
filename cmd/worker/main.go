@@ -20,15 +20,15 @@ var (
 )
 
 func init() {
-	flag.StringVar(&queueURI, "queueURI", os.Getenv("AMQP_URI"), "-queueURI=amqp://guest:guest@localhost:5672/")
-	flag.StringVar(&webhookURI, "webhookURI", os.Getenv("WEBHOOK_URI"), "-webhookURI=http://localhost:8080/webhooks/finish")
+	flag.StringVar(&queueURI, "queueURI", os.Getenv("CLOUDAMQP_URL"), "-queueURI=amqp://guest:guest@localhost:5672/")
+	flag.StringVar(&webhookURI, "webhookURI", os.Getenv("WEBHOOK_URI"), "-webhookURI=http://localhost:8080")
 }
 
 func main() {
 	figure.NewFigure("Work stiuswal", "", true).Print()
 
 	if webhookURI == "" {
-		webhookURI = "http://localhost:8080/webhooks/finish"
+		webhookURI = "http://localhost:8080"
 	}
 
 	if queueURI == "" {
@@ -69,6 +69,35 @@ func main() {
 				continue
 			}
 
+			url :=  webhookURI+"/webhooks/idempotency/"+task.OrderID
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				log.Println("NewRequest:", err.Error())
+				_ = d.Nack(false, true)
+				continue
+			}
+
+			var client = &http.Client{}
+
+			resp, err := client.Do(req)
+			if err != nil {
+				log.Println("client:", err.Error())
+				_ = d.Nack(false, true)
+				continue
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				if resp.StatusCode == http.StatusNotFound {
+					_ = d.Ack(false)
+					log.Println("Removed because idempotency", resp.StatusCode)
+					continue
+				}
+
+				_ = d.Nack(false, true)
+				log.Println("resp.StatusCode != http.StatusOK: ", resp.StatusCode)
+				continue
+			}
+
 			lss, err := lawsuit.DoCrawler(task.LawsuitNumber)
 			lssdWithBytes, _ := json.Marshal(lss)
 
@@ -80,16 +109,15 @@ func main() {
 			body := &bytes.Buffer{}
 			_ = json.NewEncoder(body).Encode(payload)
 
-			req, err := http.NewRequest("POST", webhookURI, body)
+			url = webhookURI+"/webhooks/finish"
+			req, err = http.NewRequest("POST", url, body)
 			if err != nil {
 				log.Println("NewRequest:", err.Error())
 				_ = d.Nack(false, true)
 				continue
 			}
 
-			var client = &http.Client{}
-
-			resp, err := client.Do(req)
+			resp, err = client.Do(req)
 			if err != nil {
 				log.Println("client:", err.Error())
 				_ = d.Nack(false, true)
