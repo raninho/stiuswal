@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/streadway/amqp"
@@ -29,6 +30,7 @@ func Process(db *gorm.DB, channel *amqp.Channel, lawsuitNumber string) (*Lawsuit
 	}
 
 	publish := amqp.Publishing{DeliveryMode: amqp.Persistent, ContentType: "text/plain", Body: body}
+
 	if err := channel.Publish("", queue.Name, false, false, publish); err != nil {
 		return nil, err
 	}
@@ -44,12 +46,12 @@ type ProcessFinishedInput struct {
 }
 
 func (i *ProcessFinishedInput) Ok() error {
-	if i.OrderID == "" {
-		return errors.New("order-id is blank")
+	if _, err := uuid.Parse(i.OrderID); err != nil {
+		return errors.New("order-id is invalid")
 	}
 
-	if i.LawsuitNumber == "" {
-		return errors.New("lawsuit-number is blank")
+	if !IsLawsuitNumber(i.LawsuitNumber) {
+		return errors.New("lawsuit-number is invalid")
 	}
 
 	return nil

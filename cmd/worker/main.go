@@ -14,12 +14,12 @@ import (
 )
 
 var (
-	amqpURI    string
+	queueURI    string
 	webhookURI string
 )
 
 func init() {
-	flag.StringVar(&amqpURI, "amqpURI", os.Getenv("AMQP_URI"), "-amqpURI=amqp://guest:guest@localhost:5672/")
+	flag.StringVar(&queueURI, "queueURI", os.Getenv("AMQP_URI"), "-queueURI=amqp://guest:guest@localhost:5672/")
 	flag.StringVar(&webhookURI, "webhookURI", os.Getenv("WEBHOOK_URI"), "-webhookURI=http://localhost:8080/webhooks/finish")
 }
 
@@ -28,11 +28,11 @@ func main() {
 		webhookURI = "http://localhost:8080/webhooks/finish"
 	}
 
-	if amqpURI == "" {
-		amqpURI = "amqp://guest:guest@localhost:5672/"
+	if queueURI == "" {
+		queueURI = "amqp://guest:guest@localhost:5672/"
 	}
 
-	amqpConn, err := amqp.Dial(amqpURI)
+	amqpConn, err := amqp.Dial(queueURI)
 	if err != nil {
 		panic("Error Amqp: " + err.Error())
 	}

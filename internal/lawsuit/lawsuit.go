@@ -1,12 +1,21 @@
 package lawsuit
 
 import (
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/pkg/errors"
+)
+
+const (
+	LawsuitTableName = "lawsuit"
+)
+
+var (
+	LawsuitNumberRegex = regexp.MustCompile(`^\d{7}\-\d{2}\.\d{4}\.\d{1}\.\d{2}\.\d{4}$`)
 )
 
 type Lawsuit struct {
@@ -21,15 +30,33 @@ type Lawsuit struct {
 }
 
 func (Lawsuit) TableName() string {
-	return "lawsuit"
+	return LawsuitTableName
+}
+
+func IsLawsuitNumber(lawsuitNumber string) bool {
+	if !LawsuitNumberRegex.MatchString(lawsuitNumber) {
+		return false
+	}
+
+	return true
 }
 
 func (l *Lawsuit) Ok() error {
-	if l.LawsuitNumber == "" {
-		return errors.New("LawsuitNumber is invalid")
+	if !IsLawsuitNumber(l.LawsuitNumber) {
+		return errors.New("lawsuit-number is invalid")
 	}
 
 	return nil
+}
+
+func GetByOrderID(db *gorm.DB, orderID string) (*Lawsuit, error) {
+	l := new(Lawsuit)
+
+	if err := db.First(l, "order_id = ?", orderID).Error; err != nil {
+		return nil, err
+	}
+
+	return l, nil
 }
 
 func GetByOrderIDAndLawsuitNumber(db *gorm.DB, orderID string, lawsuitNumber string) (*Lawsuit, error) {

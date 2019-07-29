@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 
 	"github.com/raninho/stiuswal/internal/lawsuit"
@@ -14,8 +16,8 @@ type LawsuitInformationRequest struct {
 }
 
 func (l *LawsuitInformationRequest) Ok() error {
-	if l.LawsuitNumber == "" {
-		return errors.New("lawsuit-number is blank")
+	if !lawsuit.IsLawsuitNumber(l.LawsuitNumber) {
+		return errors.New("lawsuit-number is invalid")
 	}
 
 	return nil
@@ -55,4 +57,22 @@ func (h *Handler) LawsuitInformationHandler(w http.ResponseWriter, r *http.Reque
 	response.LawsuitNumber = ls.LawsuitNumber
 
 	Respond(w, r, http.StatusAccepted, response)
+}
+
+func (h *Handler) GetLawsuitInformationHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	orderID := vars["orderID"]
+
+	if _, err := uuid.Parse(orderID); err != nil {
+		Respond(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ls, err := lawsuit.GetByOrderID(h.DB, orderID)
+	if err != nil {
+		Respond(w, r, http.StatusNotFound, err.Error())
+		return
+	}
+
+	Respond(w, r, http.StatusOK, ls)
 }
