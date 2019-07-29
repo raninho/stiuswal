@@ -77,11 +77,10 @@ func main() {
 			body := &bytes.Buffer{}
 			_ = json.NewEncoder(body).Encode(payload)
 
-
 			req, err := http.NewRequest("POST", webhookURI, body)
 			if err != nil {
 				log.Println("NewRequest:", err.Error())
-				err = d.Nack(false, true)
+				_ = d.Nack(false, true)
 				continue
 			}
 
@@ -90,12 +89,12 @@ func main() {
 			resp, err := client.Do(req)
 			if err != nil {
 				log.Println("client:", err.Error())
-				err = d.Nack(false, true)
+				_ = d.Nack(false, true)
 				continue
 			}
 
 			if resp.StatusCode != http.StatusOK {
-				err = d.Nack(false, true)
+				_ = d.Nack(false, true)
 				log.Println("resp.StatusCode != http.StatusOK: ", resp.StatusCode)
 				continue
 			}
