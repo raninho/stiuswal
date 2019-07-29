@@ -3,10 +3,9 @@ package lawsuit
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/streadway/amqp"
 )
 
@@ -16,25 +15,21 @@ func Process(db *gorm.DB, channel *amqp.Channel, lawsuitNumber string) (*Lawsuit
 	l := New(lawsuitNumber)
 
 	if err := Create(db, l); err != nil {
-		fmt.Println("Create: ", err.Error())
 		return nil, err
 	}
 
 	body, err := json.Marshal(l)
 	if err != nil {
-		fmt.Println("Marshal: ", err.Error())
 		return nil, err
 	}
 
 	queue, err := channel.QueueDeclare(QueueProcessName, true, false, false, false, nil)
 	if err != nil {
-		fmt.Println("QueueDeclare: ", err.Error())
 		return nil, err
 	}
 
 	publish := amqp.Publishing{DeliveryMode: amqp.Persistent, ContentType: "text/plain", Body: body}
 	if err := channel.Publish("", queue.Name, false, false, publish); err != nil {
-		fmt.Println("Publish: ", err.Error())
 		return nil, err
 	}
 

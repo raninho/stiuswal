@@ -1,7 +1,6 @@
 package lawsuit
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,30 +34,26 @@ func (l *Lawsuit) Ok() error {
 
 func GetByOrderIDAndLawsuitNumber(db *gorm.DB, orderID string, lawsuitNumber string) (*Lawsuit, error) {
 	l := new(Lawsuit)
+
 	if err := db.First(l, "order_id = ? and lawsuit_number = ?", orderID, lawsuitNumber).Error; err != nil {
 		return nil, err
 	}
+
 	return l, nil
 }
 
 func New(lawsuitNumber string) *Lawsuit {
-	l := new(Lawsuit)
-	l.LawsuitNumber = lawsuitNumber
-	l.OrderID = uuid.New().String()
-
-	return l
+	return &Lawsuit{LawsuitNumber: lawsuitNumber, OrderID: uuid.New().String()}
 }
 
 func Create(db *gorm.DB, lawsuit *Lawsuit) error {
 	lawsuit.CreatedAt = time.Now()
 
-	err := lawsuit.Ok()
-	if err != nil {
+	if err := lawsuit.Ok(); err != nil {
 		return err
 	}
 
-	err = db.Create(lawsuit).Error
-	if err != nil {
+	if err := db.Create(lawsuit).Error; err != nil {
 		return err
 	}
 
@@ -68,15 +63,11 @@ func Create(db *gorm.DB, lawsuit *Lawsuit) error {
 func Update(db *gorm.DB, lawsuit *Lawsuit) error {
 	lawsuit.UpdatedAt = time.Now()
 
-	err := lawsuit.Ok()
-	if err != nil {
+	if err := lawsuit.Ok(); err != nil {
 		return err
 	}
 
-	fmt.Println(lawsuit)
-
-	err = db.Save(lawsuit).Error
-	if err != nil {
+	if err := db.Save(lawsuit).Error; err != nil {
 		return err
 	}
 

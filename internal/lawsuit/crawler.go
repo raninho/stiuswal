@@ -2,7 +2,6 @@ package lawsuit
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -69,8 +68,6 @@ func DoCrawler(lawsuitNumber string) (map[string]LawSuitCrawler, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(urls)
 
 	ls1Grau, err := crawler(urls[0])
 	if err != nil {
