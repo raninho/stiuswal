@@ -1,2 +1,2 @@
-web: cmd/api/main
-worker: cmd/worker/main
+web: cmd/api/main.go
+worker: cmd/worker/main.go
