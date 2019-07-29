@@ -1,3 +1,6 @@
+// +heroku install ./cmd/api
+// +heroku install ./cmd/worker
+
 module github.com/raninho/stiuswal
 
 go 1.12
