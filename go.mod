@@ -1,5 +1,4 @@
-// +heroku install ./cmd/api
-// +heroku install ./cmd/worker
+// +heroku install ./cmd/api ./cmd/worker
 
 module github.com/raninho/stiuswal
 
