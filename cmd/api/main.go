@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/common-nighthawk/go-figure"
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -32,7 +33,7 @@ func init() {
 }
 
 func main() {
-	fmt.Println("API stiuswal")
+	figure.NewFigure("API stiuswal", "", true).Print()
 
 	flag.Parse()
 

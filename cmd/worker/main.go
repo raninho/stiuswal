@@ -8,13 +8,14 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/common-nighthawk/go-figure"
 	"github.com/streadway/amqp"
 
 	"github.com/raninho/stiuswal/internal/lawsuit"
 )
 
 var (
-	queueURI    string
+	queueURI   string
 	webhookURI string
 )
 
@@ -24,6 +25,8 @@ func init() {
 }
 
 func main() {
+	figure.NewFigure("Work stiuswal", "", true).Print()
+
 	if webhookURI == "" {
 		webhookURI = "http://localhost:8080/webhooks/finish"
 	}
