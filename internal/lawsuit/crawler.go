@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gocolly/colly"
 )
@@ -69,16 +70,27 @@ func DoCrawler(lawsuitNumber string) (map[string]LawSuitCrawler, error) {
 		return nil, err
 	}
 
-	ls1Grau, err := crawler(urls[0])
-	if err != nil {
-		return nil, errors.New("Error in 1 Grau")
-	}
-	lss["grau1"] = *ls1Grau
+	var wg sync.WaitGroup
 
-	ls2Grau, err := crawler(urls[1])
-	if err == nil {
-		lss["grau2"] = *ls2Grau
-	}
+	var ls1Grau = new(LawSuitCrawler)
+	var ls2Grau = new(LawSuitCrawler)
+
+	wg.Add(2)
+	go func(url string) {
+		ls, _ := crawler(url)
+		ls1Grau = ls
+		wg.Done()
+	}(urls[0])
+
+	go func(url string) {
+		ls, _ := crawler(url)
+		ls2Grau = ls
+		wg.Done()
+	}(urls[1])
+	wg.Wait()
+
+	lss["grau1"] = *ls1Grau
+	lss["grau2"] = *ls2Grau
 
 	return lss, nil
 }
