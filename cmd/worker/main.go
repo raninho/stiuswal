@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"log"
 	"net/http"
@@ -69,64 +70,27 @@ func main() {
 				continue
 			}
 
-			url :=  webhookURI+"/webhooks/idempotency/"+task.OrderID
-			req, err := http.NewRequest("GET", url, nil)
-			if err != nil {
-				log.Println("NewRequest:", err.Error())
-				_ = d.Nack(false, true)
-				continue
-			}
-
-			var client = &http.Client{}
-
-			resp, err := client.Do(req)
-			if err != nil {
-				log.Println("client:", err.Error())
-				_ = d.Nack(false, true)
-				continue
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				if resp.StatusCode == http.StatusNotFound {
+			if err := CheckWebhookIdempotency(task.OrderID); err != nil {
+				if err == ErrIdempotency {
+					log.Println("CheckWebhookIdempotency:", err.Error())
 					_ = d.Ack(false)
-					log.Println("Removed because idempotency", resp.StatusCode)
 					continue
 				}
 
 				_ = d.Nack(false, true)
-				log.Println("resp.StatusCode != http.StatusOK: ", resp.StatusCode)
 				continue
 			}
 
 			lss, err := lawsuit.DoCrawler(task.LawsuitNumber)
-			lssdWithBytes, _ := json.Marshal(lss)
-
-			payload := new(lawsuit.ProcessFinishedInput)
-			payload.OrderID = task.OrderID
-			payload.LawsuitNumber = task.LawsuitNumber
-			payload.Output = lssdWithBytes
-
-			body := &bytes.Buffer{}
-			_ = json.NewEncoder(body).Encode(payload)
-
-			url = webhookURI+"/webhooks/finish"
-			req, err = http.NewRequest("POST", url, body)
 			if err != nil {
-				log.Println("NewRequest:", err.Error())
-				_ = d.Nack(false, true)
+				log.Println("Error DoCrawler:", err.Error())
+				err = d.Nack(false, true)
 				continue
 			}
 
-			resp, err = client.Do(req)
-			if err != nil {
-				log.Println("client:", err.Error())
-				_ = d.Nack(false, true)
-				continue
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				_ = d.Nack(false, true)
-				log.Println("resp.StatusCode != http.StatusOK: ", resp.StatusCode)
+			if err := DoWebhookFinish(task, lss); err != nil {
+				log.Println("Error DoWebhookFinish:", err.Error())
+				err = d.Nack(false, true)
 				continue
 			}
 
@@ -136,4 +100,68 @@ func main() {
 	}()
 
 	<-forever
+}
+
+var (
+	ErrFinish      = errors.New("Error Webhook Finish")
+	ErrIdempotency = errors.New("Error Webhook Idempotency")
+	ErrDontKnow    = errors.New("Error Dont Know")
+)
+
+func CheckWebhookIdempotency(orderID string) error {
+	url := webhookURI + "/webhooks/idempotency/" + orderID
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	var client = &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("client:", err.Error())
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return ErrIdempotency
+		}
+
+		return ErrDontKnow
+	}
+
+	return nil
+}
+
+func DoWebhookFinish(task *lawsuit.Lawsuit, lss map[string]lawsuit.LawSuitCrawler) error {
+	lssdWithBytes, _ := json.Marshal(lss)
+
+	payload := new(lawsuit.ProcessFinishedInput)
+	payload.OrderID = task.OrderID
+	payload.LawsuitNumber = task.LawsuitNumber
+	payload.Output = lssdWithBytes
+
+	body := &bytes.Buffer{}
+	_ = json.NewEncoder(body).Encode(payload)
+
+	url := webhookURI + "/webhooks/finish"
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return err
+	}
+
+	var client = &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return ErrFinish
+	}
+
+	return nil
 }
